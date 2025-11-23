@@ -4,7 +4,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
 
 import java.util.ArrayList;
 
@@ -14,7 +13,6 @@ import fpoly.longnd.lab12.dto.ProductDTO;
 public class ProductDAO {
     MyDbHelper dbHelper;
     SQLiteDatabase db;
-    static String TAG = "ProductDAO";
 
     public ProductDAO(Context context) {
         dbHelper = new MyDbHelper(context);
@@ -34,17 +32,20 @@ public class ProductDAO {
         String sql = "SELECT * FROM tb_product";
         Cursor cursor = db.rawQuery(sql, null);
         if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                do {
-                    ProductDTO productDTO = new ProductDTO();
-                    productDTO.setId(cursor.getInt(0));
-                    productDTO.setName(cursor.getString(1));
-                    productDTO.setPrice(cursor.getDouble(2));
-                    productDTO.setId_cat(cursor.getInt(3));
-                    list.add(productDTO);
-                } while (cursor.moveToNext());
+            try {
+                if (cursor.moveToFirst()) {
+                    do {
+                        ProductDTO productDTO = new ProductDTO();
+                        productDTO.setId(cursor.getInt(0));
+                        productDTO.setName(cursor.getString(1));
+                        productDTO.setPrice(cursor.getDouble(2));
+                        productDTO.setId_cat(cursor.getInt(3));
+                        list.add(productDTO);
+                    } while (cursor.moveToNext());
+                }
+            } finally {
+                cursor.close();
             }
-            cursor.close(); // Close the cursor
         }
         return list;
     }
@@ -55,13 +56,18 @@ public class ProductDAO {
         String sql = "SELECT * FROM tb_product WHERE id = ?";
         Cursor cursor = db.rawQuery(sql, params);
 
-        if (cursor != null && cursor.moveToFirst()) {
-            productDTO = new ProductDTO();
-            productDTO.setId(cursor.getInt(0));
-            productDTO.setName(cursor.getString(1));
-            productDTO.setPrice(cursor.getDouble(2));
-            productDTO.setId_cat(cursor.getInt(3));
-            cursor.close();
+        if (cursor != null) {
+            try {
+                if (cursor.moveToFirst()) {
+                    productDTO = new ProductDTO();
+                    productDTO.setId(cursor.getInt(0));
+                    productDTO.setName(cursor.getString(1));
+                    productDTO.setPrice(cursor.getDouble(2));
+                    productDTO.setId_cat(cursor.getInt(3));
+                }
+            } finally {
+                cursor.close();
+            }
         }
         return productDTO;
     }

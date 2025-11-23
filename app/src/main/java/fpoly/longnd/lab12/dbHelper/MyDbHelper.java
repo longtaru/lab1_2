@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class MyDbHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "lab12.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2; // Increased version to force upgrade
 
 
     public MyDbHelper(Context context) {
@@ -23,7 +23,7 @@ public class MyDbHelper extends SQLiteOpenHelper {
         db.execSQL("INSERT INTO tb_cat (name) VALUES ('Drink')");
         db.execSQL("INSERT INTO tb_cat (name) VALUES ('Other')");
 
-        String sqlProduct = "CREATE TABLE tb_product (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price NUMBER NOT NULL DEFAULT 0, id_cat integer, CONSTRAINT fk_category FOREIGN KEY (id_cat) REFERENCES tb_cat (id))";
+        String sqlProduct = "CREATE TABLE tb_product (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price REAL NOT NULL DEFAULT 0, id_cat integer, FOREIGN KEY (id_cat) REFERENCES tb_cat (id));";
         db.execSQL(sqlProduct);
 
         // Add sample product data
@@ -36,10 +36,11 @@ public class MyDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        // This method will now be called on the next app run
         if (oldVersion < newVersion)
         {
-            db.execSQL("DROP TABLE IF EXISTS tb_cat");
             db.execSQL("DROP TABLE IF EXISTS tb_product");
+            db.execSQL("DROP TABLE IF EXISTS tb_cat");
             onCreate(db);
         }
     }

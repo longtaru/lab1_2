@@ -1,165 +1,108 @@
 package fpoly.longnd.lab12;
 
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import fpoly.longnd.lab12.adapter.ProductAdapter;
+import fpoly.longnd.lab12.adapter.SpinnerCatAdapter;
 import fpoly.longnd.lab12.dao.CatDAO;
 import fpoly.longnd.lab12.dao.ProductDAO;
 import fpoly.longnd.lab12.dto.CatDTO;
 import fpoly.longnd.lab12.dto.ProductDTO;
 
-public class ProductActivity extends AppCompatActivity {
-    private EditText edProdName, edProdPrice;
-    private Spinner spnCat;
-    private Button btnAddProd, btnUpdateProd;
-    private ListView lvProduct;
-
-    private ProductDAO productDAO;
-    private CatDAO catDAO;
-
-    private ProductAdapter productAdapter;
-    private ArrayList<ProductDTO> listProduct;
-    private ArrayList<CatDTO> listCategory;
-
-    private int selectedProductPosition = -1;
+public class ProductActivity extends AppCompatActivity implements ProductAdapter.OnDataChangedListener {
+    ListView lv_product;
+    ProductDAO productDAO;
+    ProductAdapter productAdapter;
+    ArrayList<ProductDTO> listProd;
+    Button btn_add;
+    CatDAO catDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_product);
+        lv_product = findViewById(R.id.lv_product);
+        btn_add = findViewById(R.id.btn_add_prod);
 
-        // Initialize DAOs
         productDAO = new ProductDAO(this);
+        listProd = new ArrayList<>();
+        productAdapter = new ProductAdapter(this, listProd, this);
+        lv_product.setAdapter(productAdapter);
+
         catDAO = new CatDAO(this);
 
-        // Find views
-        edProdName = findViewById(R.id.ed_prod_name);
-        edProdPrice = findViewById(R.id.ed_prod_price);
-        spnCat = findViewById(R.id.spn_cat);
-        btnAddProd = findViewById(R.id.btn_add_prod);
-        btnUpdateProd = findViewById(R.id.btn_update_prod);
-        lvProduct = findViewById(R.id.lv_product);
+        btn_add.setOnClickListener(v -> showAddProductDialog());
+    }
 
-        // Load data
-        listProduct = productDAO.getAllProduct();
-        listCategory = catDAO.getAll();
+    private void showAddProductDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = getLayoutInflater();
+        View view = inflater.inflate(R.layout.dialog_add_product, null);
+        builder.setView(view);
 
-        // Setup adapter
-        productAdapter = new ProductAdapter(this, listProduct);
-        lvProduct.setAdapter(productAdapter);
+        final EditText ed_name_prod_dialog = view.findViewById(R.id.ed_name_prod_dialog);
+        final EditText ed_price_prod_dialog = view.findViewById(R.id.ed_price_prod_dialog);
+        final Spinner spinner_cat_dialog = view.findViewById(R.id.spinner_cat_dialog);
 
-        // Setup spinner
-        List<String> categoryNames = new ArrayList<>();
-        for (CatDTO cat : listCategory) {
-            categoryNames.add(cat.getName());
-        }
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categoryNames);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spnCat.setAdapter(spinnerAdapter);
+        ArrayList<CatDTO> listCat = catDAO.getAll();
+        SpinnerCatAdapter spinnerCatAdapter = new SpinnerCatAdapter(this, listCat);
+        spinner_cat_dialog.setAdapter(spinnerCatAdapter);
 
-        // Add button listener
-        btnAddProd.setOnClickListener(v -> addProduct());
+        builder.setTitle("Thêm sản phẩm");
+        builder.setPositiveButton("Thêm", (dialog, which) -> {
+            String name = ed_name_prod_dialog.getText().toString().trim();
+            String priceStr = ed_price_prod_dialog.getText().toString().trim();
 
-        // Update button listener
-        btnUpdateProd.setOnClickListener(v -> updateProduct());
+            if (name.isEmpty() || priceStr.isEmpty()) {
+                Toast.makeText(this, "Tên và giá không được để trống", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-        // ListView item click listener
-        lvProduct.setOnItemClickListener((parent, view, position, id) -> {
-            selectedProductPosition = position;
-            ProductDTO product = listProduct.get(position);
-            edProdName.setText(product.getName());
-            edProdPrice.setText(String.valueOf(product.getPrice()));
+            double price = Double.parseDouble(priceStr);
+            CatDTO selectedCat = (CatDTO) spinner_cat_dialog.getSelectedItem();
 
-            // Set spinner selection
-            for (int i = 0; i < listCategory.size(); i++) {
-                if (listCategory.get(i).getId() == product.getId_cat()) {
-                    spnCat.setSelection(i);
-                    break;
-                }
+            ProductDTO newProd = new ProductDTO();
+            newProd.setName(name);
+            newProd.setPrice(price);
+            newProd.setId_cat(selectedCat.getId());
+
+            if (productDAO.addProduct(newProd) > 0) {
+                Toast.makeText(this, "Thêm thành công", Toast.LENGTH_SHORT).show();
+                reloadData();
+            } else {
+                Toast.makeText(this, "Thêm thất bại", Toast.LENGTH_SHORT).show();
             }
         });
+        builder.setNegativeButton("Hủy", null);
+        builder.show();
     }
 
-    private void addProduct() {
-        String name = edProdName.getText().toString();
-        String priceStr = edProdPrice.getText().toString();
-
-        if (name.isEmpty() || priceStr.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        double price = Double.parseDouble(priceStr);
-        int catPosition = spnCat.getSelectedItemPosition();
-        int catId = listCategory.get(catPosition).getId();
-
-        ProductDTO newProduct = new ProductDTO();
-        newProduct.setName(name);
-        newProduct.setPrice(price);
-        newProduct.setId_cat(catId);
-
-        long result = productDAO.addProduct(newProduct);
-        if (result > 0) {
-            Toast.makeText(this, "Product added successfully", Toast.LENGTH_SHORT).show();
-            listProduct.clear();
-            listProduct.addAll(productDAO.getAllProduct());
-            productAdapter.notifyDataSetChanged();
-            resetFields();
-        } else {
-            Toast.makeText(this, "Failed to add product", Toast.LENGTH_SHORT).show();
-        }
+    private void reloadData() {
+        listProd.clear();
+        listProd.addAll(productDAO.getAllProduct());
+        productAdapter.notifyDataSetChanged();
     }
 
-    private void updateProduct() {
-        if (selectedProductPosition == -1) {
-            Toast.makeText(this, "Please select a product to update", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String name = edProdName.getText().toString();
-        String priceStr = edProdPrice.getText().toString();
-
-        if (name.isEmpty() || priceStr.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        double price = Double.parseDouble(priceStr);
-        int catPosition = spnCat.getSelectedItemPosition();
-        int catId = listCategory.get(catPosition).getId();
-
-        ProductDTO updatedProduct = listProduct.get(selectedProductPosition);
-        updatedProduct.setName(name);
-        updatedProduct.setPrice(price);
-        updatedProduct.setId_cat(catId);
-
-        boolean success = productDAO.updateRow(updatedProduct);
-        if (success) {
-            Toast.makeText(this, "Product updated successfully", Toast.LENGTH_SHORT).show();
-            productAdapter.notifyDataSetChanged();
-            resetFields();
-        } else {
-            Toast.makeText(this, "Failed to update product", Toast.LENGTH_SHORT).show();
-        }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        reloadData();
     }
 
-    private void resetFields() {
-        edProdName.setText("");
-        edProdPrice.setText("");
-        spnCat.setSelection(0);
-        selectedProductPosition = -1;
+    @Override
+    public void onDataChanged() {
+        reloadData();
     }
 }

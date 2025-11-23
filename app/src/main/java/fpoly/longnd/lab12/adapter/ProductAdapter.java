@@ -1,6 +1,7 @@
 package fpoly.longnd.lab12.adapter;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,11 +21,17 @@ public class ProductAdapter extends BaseAdapter {
     private final Context context;
     private final ArrayList<ProductDTO> list;
     private final ProductDAO productDAO;
+    private final OnDataChangedListener mListener;
 
-    public ProductAdapter(Context context, ArrayList<ProductDTO> list) {
+    public interface OnDataChangedListener {
+        void onDataChanged();
+    }
+
+    public ProductAdapter(Context context, ArrayList<ProductDTO> list, OnDataChangedListener listener) {
         this.context = context;
         this.list = list;
         this.productDAO = new ProductDAO(context);
+        this.mListener = listener;
     }
 
     @Override
@@ -42,32 +49,56 @@ public class ProductAdapter extends BaseAdapter {
         return position;
     }
 
+    private static class ViewHolder {
+        TextView tv_id;
+        TextView tv_name;
+        TextView tv_price;
+        ImageView img_delete;
+    }
+
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        LayoutInflater inflater = ((Activity) context).getLayoutInflater();
-        View view = inflater.inflate(R.layout.item_product, parent, false);
+        ViewHolder holder;
+        if (convertView == null) {
+            LayoutInflater inflater = ((Activity) context).getLayoutInflater();
+            convertView = inflater.inflate(R.layout.item_product, parent, false);
+            holder = new ViewHolder();
+            holder.tv_id = convertView.findViewById(R.id.tv_id_prod);
+            holder.tv_name = convertView.findViewById(R.id.tv_name_prod);
+            holder.tv_price = convertView.findViewById(R.id.tv_price_prod);
+            holder.img_delete = convertView.findViewById(R.id.img_delete_prod);
+            convertView.setTag(holder);
+        } else {
+            holder = (ViewHolder) convertView.getTag();
+        }
 
-        TextView tv_id = view.findViewById(R.id.tv_id_prod);
-        TextView tv_name = view.findViewById(R.id.tv_name_prod);
-        TextView tv_price = view.findViewById(R.id.tv_price_prod);
-        ImageView img_delete = view.findViewById(R.id.img_delete_prod);
+        final ProductDTO productDTO = list.get(position);
+        holder.tv_id.setText(String.valueOf(productDTO.getId()));
+        holder.tv_name.setText(productDTO.getName());
+        holder.tv_price.setText(String.valueOf(productDTO.getPrice()));
 
-        ProductDTO productDTO = list.get(position);
-        tv_id.setText(String.valueOf(productDTO.getId()));
-        tv_name.setText(productDTO.getName());
-        tv_price.setText(String.valueOf(productDTO.getPrice()));
-
-        img_delete.setOnClickListener(v -> {
-            boolean success = productDAO.deleteRow(productDTO.getId());
-            if (success) {
-                Toast.makeText(context, "Product deleted successfully", Toast.LENGTH_SHORT).show();
-                list.remove(position);
-                notifyDataSetChanged();
-            } else {
-                Toast.makeText(context, "Failed to delete product", Toast.LENGTH_SHORT).show();
-            }
+        holder.img_delete.setOnClickListener(v -> {
+            showDeleteConfirmationDialog(productDTO);
         });
 
-        return view;
+        return convertView;
+    }
+
+    private void showDeleteConfirmationDialog(final ProductDTO productDTO) {
+        new AlertDialog.Builder(context)
+                .setTitle("Xác nhận xóa")
+                .setMessage("Bạn có chắc chắn muốn xóa sản phẩm '" + productDTO.getName() + "'?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    if (productDAO.deleteRow(productDTO.getId())) {
+                        Toast.makeText(context, "Xóa thành công", Toast.LENGTH_SHORT).show();
+                        if (mListener != null) {
+                            mListener.onDataChanged();
+                        }
+                    } else {
+                        Toast.makeText(context, "Xóa thất bại", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 }

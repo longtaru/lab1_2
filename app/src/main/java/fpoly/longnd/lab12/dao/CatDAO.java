@@ -4,7 +4,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
 
 import java.util.ArrayList;
 
@@ -14,7 +13,6 @@ import fpoly.longnd.lab12.dto.CatDTO;
 public class CatDAO {
     MyDbHelper dbHelper;
     SQLiteDatabase db;
-    static String TAG = "CatDAO";
 
     public CatDAO(Context context) {
         dbHelper = new MyDbHelper(context);
@@ -32,15 +30,18 @@ public class CatDAO {
         String sql = "SELECT * FROM tb_cat";
         Cursor cursor = db.rawQuery(sql, null);
         if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                do {
-                    CatDTO catDTO = new CatDTO();
-                    catDTO.setId(cursor.getInt(0));
-                    catDTO.setName(cursor.getString(1));
-                    list.add(catDTO);
-                } while (cursor.moveToNext());
+            try {
+                if (cursor.moveToFirst()) {
+                    do {
+                        CatDTO catDTO = new CatDTO();
+                        catDTO.setId(cursor.getInt(0));
+                        catDTO.setName(cursor.getString(1));
+                        list.add(catDTO);
+                    } while (cursor.moveToNext());
+                }
+            } finally {
+                cursor.close();
             }
-            cursor.close();
         }
         return list;
     }
@@ -52,12 +53,15 @@ public class CatDAO {
         Cursor cursor = db.rawQuery(sql, params);
 
         if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                catDTO = new CatDTO();
-                catDTO.setId(cursor.getInt(0));
-                catDTO.setName(cursor.getString(1));
+            try {
+                if (cursor.moveToFirst()) {
+                    catDTO = new CatDTO();
+                    catDTO.setId(cursor.getInt(0));
+                    catDTO.setName(cursor.getString(1));
+                }
+            } finally {
+                cursor.close();
             }
-            cursor.close();
         }
         return catDTO;
     }

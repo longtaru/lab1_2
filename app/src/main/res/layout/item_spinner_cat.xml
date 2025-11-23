@@ -6,27 +6,15 @@
     android:padding="16dp">
 
     <TextView
-        android:id="@+id/tv_id"
+        android:id="@+id/tv_id_spinner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp" />
 
     <TextView
-        android:id="@+id/tv_name"
+        android:id="@+id/tv_name_spinner"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1" />
-
-    <ImageView
-        android:id="@+id/img_edit"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@android:drawable/ic_menu_edit" />
-
-    <ImageView
-        android:id="@+id/img_delete"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@android:drawable/ic_menu_delete" />
 
 </LinearLayout>
